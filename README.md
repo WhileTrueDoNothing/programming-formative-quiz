@@ -102,21 +102,74 @@ If the user somehow ends the while loop without the function returning a value y
 |`valid_input`|bool|Initializes as False, and is set to True when the user inputs a valid option. This will end the while loop.|
 
 ### `run_quiz()` function
+This function takes a list of Question objects and runs a quiz by performing the following steps:
+1. Check the length of the question list and raise an error if it's 0.
+2. Ask each question in the list. Add their output (multiplied by the score per question) to the total score.
+3. After each question has been asked, display the user's total score for the quiz and return it.
 
 #### Arguments
+|Name|Type|Description|
+|----------|-------|--------|
+|`questions`|list[Question]|The list of questions to ask in the quiz.|
+|`score_per_question`|int *(optional)*|The score given for a correct answer. Defaults to 1.|
+|`question_separator`|str *(optional)*|A string to separate questions to keep things neat and easy to follow. Defaults to "-----------".|
+|`first_question_num`|int *(optional)*|The number to display the first question as, in case `run_quiz()` is being called for a segment of a quiz instead of the whole thing. Defaults to 1.|
 
 #### Raises
+|Error|Condition|
+|--------|--------|
+|ValueError|If `questions` is set to an empty list.|
 
 #### Variables within `run_quiz()`
+|Name|Type|Description|
+|----------|-------|--------|
+|score|int|Initializes as 0. Keeps track of the user's total score and is returned at the end of the function.|
 
 ### `extract_placeholders()` function
+A short function for extracting placeholder values from format strings by performing the following steps:
+1. Use `string.Formatter().parse() to break the string into tuples of literal text and fields to replace.
+2. Get the second item in each of these tuples (at index 1), as this is where the placeholder name is stored.
+3. Return these values as a list.
 
 #### Arguments
+|Name|Type|Description|
+|----------|-------|--------|
+|string_to_extract|str|The format string to extract placeholders from.|
 
 ### `gen_questions_csv()` function
+This function randomly generates a list of Question objects using data loaded from a CSV file by performing the following steps:
+1. Use pandas to read the CSV from the given source path and save it as `q_df`.
+2. Check that the dataframe provided is large enough for the requested number of questions, raise an error if it's too small. There should be enough data to allow rows to be used for one question only, either as an answer or an incorrect option.
+3. Extract all column names from `q_details` and store them in a set to avoid saving the same column multiple times.
+4. Use this set to select only columns that are needed from `q_df`, then initialize a column of False values to signify whether a given row has been used yet.
+For each question:
+  5. Pick a random set of details to use and extract the relevant question and answer columns.
+  6. Pick a single random unused row from the data, select the columns needed for the question and pack their values into a dictionary.
+  7. Use this dictionary to generate the question's text.
+  8. Use the same dictionary to filter the dataframe for any rows with the same values in the question columns (in case the question has multiple answers).
+  9. Save these filtered rows as the question's answers and mark those rows as used.
+  10. If the question to be generated isn't multiple choice, it can now be appended to the list.
+  11. If it is multiple choice, then incorrect answers must be generated.
+  12. Calculate the number of incorrect options required by subtracting the number of correct answers from the total options required.
+  While more incorrect options are needed:
+      13. Take a number of random unused rows equal to the number of options still needed.
+      14. Remove any rows with duplicate values in the answer column.
+      15. Flag the remaining rows as used and add their answer values to the list of incorrect options.
+      16. Update the number of options needed, taking into account the number of incorrect options.
+  17. With all details generated, the question can now be appended to the list.
+18. Once all questions have been generated, return the list of questions.
 
 #### Arguments
+|Name|Type|Description|
+|----------|-------|--------|
+|source_path|str|The name/path of the CSV file to load question data from.|
+|q_details|list[tuple[str,str]]|Templates to generate questions from. The first value should be a format string for the question text, with column names from the dataset as the placeholders. The second value should be the name of the column the answer is to be retrieved from.|
+|multi_choice|bool *(optional)*|Generates multiple choice questions if True, free text ones if False. Defaults to True.|
+|num_questions|int *(optional)*||
+||||
 
 #### Raises
 
+
 #### Variables within `gen_questions_csv()`
+
