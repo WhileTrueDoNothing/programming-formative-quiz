@@ -12,6 +12,8 @@ while play_again:
     )
 
     selected_difficulty = ""
+    question_list = []
+
     while selected_difficulty == "":
 
         selected_difficulty = input("Select a difficulty: ")
