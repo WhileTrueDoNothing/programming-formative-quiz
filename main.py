@@ -2,6 +2,7 @@ import quiz_utils as q
 
 play_again = True
 SEPARATOR_STRING = "-----------"
+question_file = "postcode_areas.csv"
 question_texts = [
                     ("What is the postcode area for {postcode_area_name}?", "postcode_area"),
                     ("What is the full name of the postcode area {postcode_area}?", "postcode_area_name")
@@ -27,14 +28,14 @@ while play_again:
         if selected_difficulty.lower() in ["a", "normal"]:
             print(SEPARATOR_STRING)
 
-            question_list = q.gen_questions_csv("postcode_areas.csv", question_texts)
+            question_list = q.gen_questions_csv(question_file, question_texts)
 
             print("Good luck!")
 
         elif selected_difficulty in ["b", "hard"]:
             print(SEPARATOR_STRING)
 
-            question_list = q.gen_questions_csv("postcode_areas.csv", question_texts, multi_choice=False)
+            question_list = q.gen_questions_csv(question_file, question_texts, multi_choice=False)
 
             print("I hope you're ready for this.")
 
