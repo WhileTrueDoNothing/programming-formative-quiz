@@ -1,11 +1,11 @@
 """Tools for creating questions and quizzes."""
 
-from random import shuffle
-from random import randint
-from string import ascii_lowercase
-import pandas as pd
-import numpy as np
-import string
+from random import shuffle              # for shuffling multiple choice options
+from random import randint              # for selecting random items from a list
+from string import ascii_lowercase      # for generating the index for multiple choice options
+import pandas as pd                     # for importing and managing question data
+import numpy as np                      # for condensing filter conditions
+import string                           # for handling custom question strings
 
 
 class Question:
@@ -29,8 +29,10 @@ class Question:
         """
         Asks the user the question. Returns 1 if the user inputs the correct answer, or 0 otherwise.
         """
+
         print(self.question)
         user_answer = input("Your answer: ")
+
         if user_answer.lower() in [answer.lower() for answer in self.answers]:
             print("Correct!")
             return 1
@@ -56,6 +58,7 @@ class MultiChoiceQuestion(Question):
         Raises:
             ValueError: If the combined length of correct and incorrect answer lists is higher than 26.
         """
+
         if len(answers) + len(wrong_answers) > 26:
             raise ValueError(
                 "Combined length of correct and incorrect answer lists must be 26 or less. Total options received: {total}".format(
@@ -69,6 +72,7 @@ class MultiChoiceQuestion(Question):
         """
         Asks the user the question, loops until an option is selected. Returns 1 if the user inputs the correct answer, or 0 otherwise.
         """
+
         all_options = self.answers + self.wrong_answers
         shuffle(all_options)
 
@@ -92,6 +96,7 @@ class MultiChoiceQuestion(Question):
 
         while not valid_input:
             user_answer = input("Your answer: ")
+
             if user_answer.lower() in option_list.keys():
                 valid_input = True
                 if option_list[user_answer.lower()] in self.answers:
@@ -112,6 +117,8 @@ class MultiChoiceQuestion(Question):
                     return 0
             else:
                 print("Please enter one of the options!")
+        
+        # The function should exit during the while loop, this is here in case it does not
         print("How is this method still running?")
         return 0
 
@@ -134,8 +141,9 @@ def run_quiz(
     Returns:
         int: The total score for the quiz.
     """
+
     if len(questions) == 0:
-        raise ValueError("A quiz needs to have questions!")
+        raise ValueError("No questions provided for the quiz!")
 
     score = 0
 
@@ -153,6 +161,7 @@ def run_quiz(
 
 def extract_placeholders(string_to_extract: str):
     """Extracts the {placeholder} names from a string and returns them as a list."""
+
     return [
         span[1]
         for span in string.Formatter().parse(string_to_extract)
@@ -186,11 +195,10 @@ def gen_questions_csv(
 
     print("Generating questions...")
 
-    # load CSV as a dataframe
     q_df = pd.read_csv(source_path)
 
     # make sure there aren't more questions than rows in the dataframe
-    # (calculate with num questions * multi_choice_options for multi choice)
+    # or more options needed for multiple choice questions than rows in the data
     if (num_questions > len(q_df.index)) or (
         multi_choice and num_questions * multi_choice_options > len(q_df.index)
     ):
@@ -204,6 +212,7 @@ def gen_questions_csv(
         cols_to_use.add(a)
 
     # select only needed columns from dataframe
+    # throw an error if a provided column name doesn't exist in the data
     try:
         q_df = q_df[list(cols_to_use)]
     except KeyError as e:
@@ -229,10 +238,10 @@ def gen_questions_csv(
         if len(unused_rows.index) == 0:
             raise ValueError("Not enough unused data to generate question!")
 
-        # pick random row from data (filtered so used rows don't show up), get values of question column
-        # pack question columns into dictionary {col_name:value}
+        # pick random row from data, pack question column values into a dictionary
         q_text_dict = unused_rows.sample()[q_cols].to_dict("records")[0]
 
+        # generate text for the question
         q_text = selected_q[0].format(**q_text_dict)
 
         # create conditions to filter for answers
@@ -248,27 +257,28 @@ def gen_questions_csv(
         # flag rows as used
         q_df.loc[conds_reduced, "row_used"] = True
 
-        # if multi choice question
         if multi_choice:
             options_needed = multi_choice_options - len(q_answers)
             q_incorrect = []
-            # pick random wrong answers either directly via answer column or by question column(s) + filter again
+
             while options_needed > 0:
                 if len(q_df[~q_df["row_used"]].index) < options_needed:
                     raise ValueError("Not enough unused data to generate question!")
 
                 # get random incorrect options
-                options_to_add = q_df[~q_df["row_used"]].sample(options_needed)
+                options_to_add = q_df[~q_df["row_used"] & ~q_df[a_col].isin(q_answers)].sample(options_needed)
                 options_to_add.drop_duplicates(subset=a_col)
 
                 q_incorrect.extend(options_to_add[a_col].to_list())
 
-                options_needed = (
-                    multi_choice_options - len(q_answers) - len(q_incorrect)
-                )
+                # flag rows as used
+                q_df.loc[q_df.index.isin(options_to_add), "row_used"] = True
+
+                options_needed = multi_choice_options - len(q_answers) - len(q_incorrect)
 
             # save details as MultiChoiceQuestion object
             q_list.append(MultiChoiceQuestion(q_text, q_answers, q_incorrect))
+
         else:
             # save details as Question object
             q_list.append(Question(q_text, q_answers))
